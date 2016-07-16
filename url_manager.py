@@ -7,6 +7,12 @@ class UrlManager(object):
         self.new_urls = set()
         self.old_urls = set()
 
+    def add_old_urls(self, urls):
+        if urls is None:
+            return
+        for url in urls:
+            self.old_urls.add(url)
+
     def add_new_url(self, url):
         if url is None:
             return

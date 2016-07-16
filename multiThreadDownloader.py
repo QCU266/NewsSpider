@@ -6,12 +6,14 @@ from threading import Thread, Lock
 from Queue import Queue
 import time
 import copy
-
+import random
 
 class Fetcher:
 
     def __init__(self, threads):
-        self.opener = urllib2.build_opener(urllib2.HTTPHandler)
+        #self.header = self.newHeader()
+        # self.opener = urllib2.build_opener(urllib2.HTTPHandler)
+        self.opener = urllib2.build_opener()
         self.lock = Lock()  # 线程锁
         self.q_req = Queue()  # 任务队列
         self.q_ans = Queue()  # 完成队列
@@ -22,6 +24,21 @@ class Fetcher:
             # 之前调用。默认为False
             t.start()  # 启动线程
         self.running = 0  # 设置运行中的线程个数
+        self.newHeader()
+
+    def newHeader(self):
+        headers = [
+            {'User-Agent': 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:34.0) Gecko/20100101 Firefox/34.0'},
+            {'User-Agent': 'Mozilla/5.0 (Windows; U; Windows NT 6.1; en-US; rv:1.9.1.6) Gecko/20091201 Firefox/3.5.6'},
+            {'User-Agent': 'Mozilla/5.0 (Windows NT 6.2) AppleWebKit/535.11 (KHTML, like Gecko) Chrome/17.0.963.12 Safari/535.11'},
+            {'User-Agent': 'Mozilla/5.0 (compatible; MSIE 10.0; Windows NT 6.2; Trident/6.0)'},
+            {'User-Agent': 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:40.0) Gecko/20100101 Firefox/40.0'},
+            {'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Ubuntu Chromium/44.0.2403.89 Chrome/44.0.2403.89 Safari/537.36'}
+        ]
+        # 用于爬取网页前，随机获取一个header
+        self.header = lambda : headers[random.randint(0, len(headers)-1)]
+        self.opener.addheaders = [('User-Agent', (self.header())['User-Agent'])]
+
 
     def __del__(self):  # 解构时需等待两个队列完成
         time.sleep(0.5)
@@ -51,6 +68,10 @@ class Fetcher:
             with self.lock:
                 self.running += 1
             try:
+                #request = urllib2.Request(req)
+                #request.add_header(self.header)
+                #ans = urllib2.urlopen(request).read()
+                self.opener.addheaders
                 ans = self.opener.open(req).read()
             except Exception, what:
                 ans = ''
@@ -67,12 +88,19 @@ class downloader:
         contents = []
         dic = dict()
         f = Fetcher(threads)
+        print f.header()
         for url in urls:
             f.push(url)
+
+        count = 0
         while f.taskleft():
             #contents[i] = dict()
+            if count == 20:
+                f.newHeader()
+                count = 0
+            count +=1
             dic['url'], dic['content'] = f.pop()
-            tmp = copy.deepcopy(dic)
+            tmp = copy.deepcopy(dic)  # 深拷贝
             contents.append(tmp)
             #print dic['url']
             #print len(contents)
@@ -82,10 +110,10 @@ class downloader:
         #    print content['url']
         return contents
 
-if __name__ == "__main__":  # 模块测试代码
+if __name__ == "__main__":
     links = ['http://news.163.com/photoview/3R710001/2187934.html','http://news.163.com/photoview/6QQD0001/2187173.html']
     #links = [u'http://news.163.com/photoview/3R710001/2187934.html',u'http://news.163.com/photoview/3R710001/2187799.html',u'http://news.163.com/photoview/3R710001/2187495.html',u'http://news.163.com/photoview/6QQD0001/2187173.html',u'http://news.163.com/16/0617/17/BPPFMOQ0000159VM.html',u'http://news.163.com/photoview/6QQD0001/119958.html',u'http://news.163.com/16/0701/16/BQTDJE8100014PRF.html',u'http://news.163.com/16/0701/21/BQTURR9000014PRF.html',u'http://news.163.com/16/0630/07/BQPSU59G00014PRF.html',u'http://news.163.com/16/0701/07/BQSFT44100014PRF.html',u'http://news.163.com/photoview/00AP0001/2188140.html',u'http://news.163.com/photoview/00AO0001/2188125.html',u'http://news.163.com/photoview/00AO0001/2188125.html',u'http://news.163.com/photoview/00AN0001/2188102.html',u'http://news.163.com/photoview/00AN0001/2188102.html',u'http://news.163.com/photoview/00AP0001/2188139.html',u'http://news.163.com/photoview/00AP0001/2188139.html']
     netease = downloader()
     text = netease.download(links, 1)
-    print text[0]['url']
+    print text[0]
     print text[1]['url']
